@@ -10,10 +10,10 @@ This guide orients contributors working on the large-format simulator so updates
 - `spec.md` captures product intent; reference it before altering flows or visuals.
 
 ## Build, Test, and Development Commands
-- `npm install` installs TypeScript, Vite, and React dependencies.
-- `npm run dev` starts the local dev server (http://localhost:5173 by default). Set `GEMINI_API_KEY` in `.env.local` before capturing live shots.
-- `npm run build` produces the static bundle in `dist/`.
-- `npm run preview` serves the production build to validate release artifacts.
+- `yarn install` installs TypeScript, Vite, and React dependencies.
+- `yarn dev` starts the local dev server (http://localhost:5173 by default). Set `GEMINI_API_KEY` in `.env.local` before capturing live shots.
+- `yarn build` produces the static bundle in `dist/`.
+- `yarn preview` serves the production build to validate release artifacts.
 
 ## Coding Style & Naming Conventions
 - Stick to TypeScript, functional React components, and hooks. Use two-space indentation and avoid semicolons unless required by TypeScript.
@@ -25,7 +25,7 @@ This guide orients contributors working on the large-format simulator so updates
 - No automated test runner ships today; smoke test manually in dev mode after each change.
 - Toggle `DEV_MODE` in `constants.ts` to shorten timers while exercising the Bathroom and Negatives flows.
 - Validate the randomness pipeline by capturing multiple shots, developing batches, and confirming persisted state survives refreshes.
-- When adding tests, colocate them beside the module (e.g., `services/photoProcessor.test.ts`) and wire the script as `npm test`.
+- When adding tests, colocate them beside the module (e.g., `services/photoProcessor.test.ts`) and wire the script as `yarn test`.
 
 ## Commit & Pull Request Guidelines
 - Write imperative, present-tense summaries under 70 characters (e.g., “Add bathroom agitation feedback”). Group related changes per commit.
