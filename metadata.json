@@ -1,0 +1,7 @@
+{
+  "name": "Large Format Pain Simulator",
+  "description": "A satirical app that simulates the frustrating yet rewarding process of large format black and white photography. Experience the pain of manual focus, limited shots, and darkroom mishaps.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
