@@ -56,32 +56,151 @@ const LensRingDial: React.FC<{ label: string, options: string[], value: string, 
 };
 
 const FocusDial: React.FC<{ value: number, onChange: (value: number) => void, disabled: boolean }> = ({ value, onChange, disabled }) => {
-    const handleDecrement = () => {
-        if (!disabled) onChange(Math.max(0, value - 1));
-    };
-    const handleIncrement = () => {
-        if (!disabled) onChange(Math.min(100, value + 1));
-    };
+    const dialRef = useRef<HTMLDivElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
+
+    const normalizedValue = Math.min(100, Math.max(0, value));
+    const angle = (normalizedValue / 100) * 270 - 135;
+
+    const updateValueFromPointer = useCallback((clientX: number, clientY: number) => {
+        const rect = dialRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        const deltaX = clientX - centerX;
+        const deltaY = centerY - clientY;
+
+        let degrees = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+        if (degrees < -180) {
+            degrees += 360;
+        }
+
+        const clampedDegrees = Math.max(-135, Math.min(135, degrees));
+        const nextValue = Math.round(((clampedDegrees + 135) / 270) * 100);
+
+        onChange(nextValue);
+    }, [onChange]);
+
+    const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+        if (disabled) return;
+        event.preventDefault();
+        if (dialRef.current) {
+            dialRef.current.setPointerCapture(event.pointerId);
+        }
+        setIsDragging(true);
+        updateValueFromPointer(event.clientX, event.clientY);
+    }, [disabled, updateValueFromPointer]);
+
+    const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+        if (!isDragging || disabled) return;
+        event.preventDefault();
+        updateValueFromPointer(event.clientX, event.clientY);
+    }, [disabled, isDragging, updateValueFromPointer]);
+
+    const endDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+        if (!isDragging) return;
+        if (dialRef.current && dialRef.current.hasPointerCapture(event.pointerId)) {
+            dialRef.current.releasePointerCapture(event.pointerId);
+        }
+        setIsDragging(false);
+    }, [isDragging]);
+
+    const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+        if (disabled) return;
+        event.preventDefault();
+        const step = event.deltaY > 0 ? -1 : 1;
+        const nextValue = Math.min(100, Math.max(0, normalizedValue + step));
+        if (nextValue !== normalizedValue) {
+            onChange(nextValue);
+        }
+    }, [disabled, normalizedValue, onChange]);
+
+    const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (disabled) return;
+        let nextValue = normalizedValue;
+
+        switch (event.key) {
+            case 'ArrowUp':
+            case 'ArrowRight':
+                nextValue = Math.min(100, normalizedValue + 1);
+                break;
+            case 'ArrowDown':
+            case 'ArrowLeft':
+                nextValue = Math.max(0, normalizedValue - 1);
+                break;
+            case 'Home':
+                nextValue = 0;
+                break;
+            case 'End':
+                nextValue = 100;
+                break;
+            default:
+                return;
+        }
+
+        event.preventDefault();
+        if (nextValue !== normalizedValue) {
+            onChange(nextValue);
+        }
+    }, [disabled, normalizedValue, onChange]);
+
+    useEffect(() => {
+        if (disabled && isDragging) {
+            setIsDragging(false);
+        }
+    }, [disabled, isDragging]);
 
     return (
         <div className="flex flex-col items-center select-none">
             <span className="font-mono text-xs text-zinc-400 mb-2">Focus</span>
-            <div className="flex items-center justify-center w-40 h-12">
-                <span
-                    onClick={handleDecrement}
-                    className={`font-mono text-3xl text-zinc-500 transition-colors transform -rotate-12 translate-y-1 ${!disabled ? 'cursor-pointer hover:text-zinc-300' : 'cursor-not-allowed opacity-50'}`}
-                >
-                    -
-                </span>
-                <span className="font-mono text-xl text-zinc-100 font-bold mx-3 w-12 text-center">
-                    {value}
-                </span>
-                <span
-                    onClick={handleIncrement}
-                    className={`font-mono text-3xl text-zinc-500 transition-colors transform rotate-12 translate-y-1 ${!disabled ? 'cursor-pointer hover:text-zinc-300' : 'cursor-not-allowed opacity-50'}`}
-                >
-                    +
-                </span>
+            <div
+                ref={dialRef}
+                role="slider"
+                aria-label="Focus"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={normalizedValue}
+                aria-valuetext={`${normalizedValue} focus units`}
+                aria-disabled={disabled}
+                tabIndex={disabled ? -1 : 0}
+                className={`relative flex items-center justify-center w-32 h-32 rounded-full border border-zinc-800 bg-zinc-950 transition-opacity ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-grab focus:outline-none focus:ring-2 focus:ring-zinc-300/40 active:cursor-grabbing'}`}
+                style={{
+                    background: 'radial-gradient(circle at 50% 42%, rgba(82,82,91,0.22), rgba(10,10,12,0.96) 70%)',
+                    boxShadow: disabled ? '0 10px 26px rgba(0,0,0,0.4)' : '0 18px 40px rgba(0,0,0,0.55)'
+                }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={endDrag}
+                onPointerCancel={endDrag}
+                onPointerLeave={endDrag}
+                onWheel={handleWheel}
+                onKeyDown={handleKeyDown}
+            >
+                <div className="absolute inset-0 pointer-events-none">
+                    <div
+                        className="absolute inset-[9%] rounded-full border border-zinc-900/60 bg-zinc-900/80 shadow-[inset_0_6px_14px_rgba(0,0,0,0.65)] overflow-hidden"
+                        style={{
+                            transform: `rotate(${angle}deg)`,
+                            transition: isDragging ? 'none' : 'transform 120ms ease-out'
+                        }}
+                    >
+                        <div
+                            className="absolute inset-0 opacity-90"
+                            style={{
+                                backgroundImage: 'repeating-linear-gradient(90deg, rgba(113,113,122,0.35) 0px 6px, rgba(24,24,27,0.96) 6px 12px)'
+                            }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-br from-zinc-800/35 via-transparent to-black/45" />
+                    </div>
+                    <div
+                        className="absolute inset-[28%] rounded-full border border-zinc-900/50 bg-gradient-to-br from-zinc-700/25 via-zinc-900 to-black shadow-[inset_0_5px_10px_rgba(0,0,0,0.75)]"
+                    >
+                        <div className="absolute inset-[18%] rounded-full bg-gradient-to-br from-zinc-200/12 via-transparent to-black/45 mix-blend-screen" />
+                    </div>
+                    <div className="absolute left-1/2 top-[7%] h-[13%] w-[10%] -translate-x-1/2 rounded-b-full bg-gradient-to-b from-zinc-200/80 via-zinc-100/20 to-transparent shadow-[0_2px_6px_rgba(255,255,255,0.12)]" />
+                    <div className="absolute inset-0 rounded-full border border-zinc-900/35 shadow-[inset_0_0_18px_rgba(0,0,0,0.6)]" />
+                </div>
             </div>
         </div>
     );
