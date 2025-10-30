@@ -2,6 +2,7 @@ export enum View {
   CAMERA,
   DARKROOM,
   GALLERY,
+  ENLARGER,
 }
 
 export enum PhotoError {
@@ -30,4 +31,14 @@ export interface Film {
   developStartTime?: number;
   isDry: boolean;
   errors: PhotoError[];
+}
+
+export interface Print {
+  id: string;
+  sourceFilmId: string;
+  createdAt: number;
+  exposureSeconds: number;
+  contrastGrade: number;
+  tone: 'Neutral' | 'Warm' | 'Cool';
+  imageData: string;
 }

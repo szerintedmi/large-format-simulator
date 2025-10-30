@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Film } from './types';
+import { View, Film, Print } from './types';
 import CameraView from './components/CameraView';
 import DarkroomView from './components/DarkroomView';
 import GalleryView from './components/GalleryView';
-import { CameraIcon, BeakerIcon, ImageIcon } from './components/Icons';
-import { getFilms, saveFilms } from './services/storage';
+import EnlargerView from './components/EnlargerView';
+import { CameraIcon, BeakerIcon, ImageIcon, EnlargerIcon } from './components/Icons';
+import { getFilms, saveFilms, getPrints, savePrints } from './services/storage';
 import { processFilm } from './services/photoProcessor';
 import { TOTAL_FILM_HOLDERS } from './constants';
 
@@ -12,9 +13,13 @@ const App: React.FC = () => {
   const [view, setView] = useState<View>(View.CAMERA);
   const [shotsLeft, setShotsLeft] = useState(TOTAL_FILM_HOLDERS);
   const [films, setFilms] = useState<Film[]>([]);
+  const [prints, setPrints] = useState<Print[]>([]);
 
   useEffect(() => {
     setFilms(getFilms());
+    const storedPrints = getPrints();
+    storedPrints.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+    setPrints(storedPrints);
   }, []);
 
   useEffect(() => {
@@ -22,6 +27,10 @@ const App: React.FC = () => {
     const undevelopedFilmsCount = films.filter(f => !f.isDeveloped).length;
     setShotsLeft(TOTAL_FILM_HOLDERS - undevelopedFilmsCount);
   }, [films]);
+
+  useEffect(() => {
+    savePrints(prints);
+  }, [prints]);
   
   const addFilm = useCallback((film: Film) => {
     setFilms(prevFilms => [...prevFilms, film]);
@@ -40,6 +49,9 @@ const App: React.FC = () => {
     });
   }, []);
 
+  const addPrint = useCallback((print: Print) => {
+    setPrints(prevPrints => [print, ...prevPrints]);
+  }, []);
 
   const renderView = () => {
     switch (view) {
@@ -47,6 +59,8 @@ const App: React.FC = () => {
         return <DarkroomView films={films} batchUpdateFilms={batchUpdateFilms} processFilm={processFilm} />;
       case View.GALLERY:
         return <GalleryView films={films} updateFilm={updateFilm} />;
+      case View.ENLARGER:
+        return <EnlargerView films={films} prints={prints} addPrint={addPrint} />;
       case View.CAMERA:
       default:
         return <CameraView shotsLeft={shotsLeft} addFilm={addFilm} />;
@@ -78,6 +92,7 @@ const App: React.FC = () => {
         <NavItem targetView={View.CAMERA} icon={<CameraIcon />} label="Camera" />
         <NavItem targetView={View.DARKROOM} icon={<BeakerIcon />} label="Bathroom" />
         <NavItem targetView={View.GALLERY} icon={<ImageIcon />} label="Negatives" />
+        <NavItem targetView={View.ENLARGER} icon={<EnlargerIcon />} label="Enlarge" />
       </nav>
     </div>
   );
